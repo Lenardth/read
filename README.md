@@ -48,34 +48,6 @@ Smart Booking is an AI-powered travel planning and booking platform. Users descr
 
 ## 2. System Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                      CLIENT BROWSER                      │
-│  Alpine.js · Vite-bundled JS modules · CSS per-page     │
-└────────────────────────┬────────────────────────────────┘
-                         │ HTTPS
-┌────────────────────────▼────────────────────────────────┐
-│                   VERCEL SERVERLESS                      │
-│  api/index.php  →  Laravel 12 Application               │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐  │
-│  │  Routes  │  │Middleware│  │    Controllers         │  │
-│  │ web.php  │  │auth/csrf │  │ 20+ controllers        │  │
-│  └──────────┘  └──────────┘  └──────────────────────┘  │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │              Service Layer                        │   │
-│  │  PricingService · AviationstackService            │   │
-│  │  GeoapifyService · AiSuggestionController         │   │
-│  └──────────────────────────────────────────────────┘   │
-└────────────────────────┬────────────────────────────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│  Neon        │ │  Groq API    │ │  AeroDataBox │
-│  PostgreSQL  │ │  LLM         │ │  Flights API │
-│  (prod DB)   │ │  llama-3.3   │ │  (RapidAPI)  │
-└──────────────┘ └──────────────┘ └──────────────┘
-```
 
 ### Technology Stack
 
@@ -96,53 +68,6 @@ Smart Booking is an AI-powered travel planning and booking platform. Users descr
 ---
 
 ## 3. Use Case Diagram
-
-```
-                    ┌─────────────────────────────────────────┐
-                    │           Smart Booking System           │
-                    │                                          │
-  ┌──────────┐      │  ┌─────────────────────────────────┐   │
-  │  Guest   │──────┼─▶│ Browse Destinations              │   │
-  │  User    │      │  │ View Landing Page                │   │
-  └──────────┘      │  │ Search Flights (public)          │   │
-                    │  │ Browse Accommodations            │   │
-                    │  │ View Community                   │   │
-                    │  └─────────────────────────────────┘   │
-                    │                                          │
-  ┌──────────┐      │  ┌─────────────────────────────────┐   │
-  │Registered│──────┼─▶│ Register / Login                 │   │
-  │  User    │      │  │ Plan AI Trip                     │   │
-  │(Traveler)│      │  │ Book Flights                     │   │
-  └──────────┘      │  │ Book Accommodations              │   │
-       │            │  │ Apply Coupon Codes               │   │
-       │            │  │ Manage Wishlist                  │   │
-       │            │  │ Upload Photos/Videos             │   │
-       │            │  │ View/Export Itineraries          │   │
-       │            │  │ Chat with Other Users            │   │
-       │            │  │ Join Community Groups            │   │
-       │            │  │ Post Community Topics/Stories    │   │
-       │            │  │ Manage Profile                   │   │
-       │            │  │ View Notifications               │   │
-       │            │  │ Subscribe to Premium             │   │
-       │            │  └─────────────────────────────────┘   │
-       │            │                                          │
-  ┌──────────┐      │  ┌─────────────────────────────────┐   │
-  │  Agency  │──────┼─▶│ All Traveler Actions             │   │
-  │   User   │      │  │ Manage Flight Listings           │   │
-  └──────────┘      │  │ View Agency Bookings             │   │
-                    │  │ Track Commission Revenue         │   │
-                    │  └─────────────────────────────────┘   │
-                    │                                          │
-  ┌──────────┐      │  ┌─────────────────────────────────┐   │
-  │  System  │──────┼─▶│ Auto-migrate DB on deploy        │   │
-  │(Vercel)  │      │  │ Seed initial data                │   │
-  └──────────┘      │  │ Poll notifications (5s)          │   │
-                    │  │ Apply service fees on booking    │   │
-                    │  └─────────────────────────────────┘   │
-                    └─────────────────────────────────────────┘
-```
-
----
 
 ## 4. Use Cases (Detailed)
 
@@ -205,137 +130,6 @@ Smart Booking is an AI-powered travel planning and booking platform. Users descr
 
 ## 5. Class Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          MODELS                                      │
-└─────────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────┐         ┌──────────────────────┐
-│        User          │         │    AgencyProfile      │
-├──────────────────────┤         ├──────────────────────┤
-│ id: bigint PK        │1───────1│ id: bigint PK         │
-│ name: string         │         │ user_id: FK           │
-│ email: string unique │         │ agency_name: string   │
-│ password: hashed     │         │ business_registration │
-│ user_type: enum      │         │ website: string       │
-│   (user|agency)      │         │ rating: decimal       │
-│ is_premium: bool     │         │ total_reviews: int    │
-│ premium_until: ts    │         └──────────────────────┘
-│ profile_picture      │
-│ agency_name          │         ┌──────────────────────┐
-│ bio, phone, location │         │    Subscription       │
-└──────────┬───────────┘         ├──────────────────────┤
-           │                     │ id: bigint PK         │
-     ┌─────┼──────────────┐      │ user_id: FK           │
-     │     │              │      │ plan: enum(premium)   │
-     ▼     ▼              ▼      │ amount_paid: decimal  │
-┌─────────┐ ┌──────────┐ ┌────┐ │ status: enum          │
-│  Trip   │ │ Booking  │ │... │ │ starts_at, ends_at    │
-└─────────┘ └──────────┘ └────┘ └──────────────────────┘
-
-┌──────────────────────┐         ┌──────────────────────┐
-│         Trip         │         │       Booking         │
-├──────────────────────┤         ├──────────────────────┤
-│ id: bigint PK        │         │ id: bigint PK         │
-│ user_id: FK          │         │ user_id: FK           │
-│ title: string        │         │ flight_id: FK null    │
-│ destination: string  │         │ hotel_id: FK null     │
-│ country: string      │         │ trip_id: FK null      │
-│ mood: string         │         │ booking_reference     │
-│ feeling_note         │         │ subtotal: decimal     │
-│ budget: string       │         │ discount_amount       │
-│ duration: string     │         │ service_fee: decimal  │
-│ companion: string    │         │ total_price: decimal  │
-│ region: string       │         │ coupon_code: string   │
-│ accommodation        │         │ status: enum          │
-│ origin: string       │         │ passenger_details:JSON│
-│ month: string        │         └──────────┬────────────┘
-│ estimated_cost       │                    │
-│ status: enum         │         ┌──────────▼────────────┐
-│ start_date, end_date │         │    RevenueRecord       │
-└──────────────────────┘         ├──────────────────────┤
-                                 │ booking_id: FK        │
-┌──────────────────────┐         │ user_id: FK           │
-│    Destination       │         │ booking_subtotal      │
-├──────────────────────┤         │ discount_amount       │
-│ id: bigint PK        │         │ service_fee           │
-│ name: string         │         │ agency_commission     │
-│ country: string      │         │ net_revenue           │
-│ region: string       │         │ coupon_code           │
-│ category: string     │         └──────────────────────┘
-│ mood: string         │
-│ description: text    │         ┌──────────────────────┐
-│ image_url: string    │         │       Coupon          │
-│ price_from: decimal  │         ├──────────────────────┤
-│ badge: string        │         │ id: bigint PK         │
-│ is_hidden_gem: bool  │         │ code: string unique   │
-│ is_active: bool      │         │ type: enum(pct|fixed) │
-│ lat, lng: float      │         │ value: decimal        │
-└──────────────────────┘         │ min_order: decimal    │
-                                 │ max_discount: decimal │
-┌──────────────────────┐         │ uses_total: int       │
-│  SavedDestination    │         │ uses_limit: int null  │
-├──────────────────────┤         │ uses_per_user: int    │
-│ id: bigint PK        │         │ is_active: bool       │
-│ user_id: FK          │         │ expires_at: timestamp │
-│ destination_id: FK   │         └──────────────────────┘
-│ created_at           │
-└──────────────────────┘         ┌──────────────────────┐
-                                 │      CouponUse        │
-┌──────────────────────┐         ├──────────────────────┤
-│       Media          │         │ coupon_id: FK         │
-├──────────────────────┤         │ user_id: FK           │
-│ id: bigint PK        │         │ booking_id: FK        │
-│ user_id: FK          │         │ discount_amount       │
-│ file_path: string    │         └──────────────────────┘
-│ file_name: string    │
-│ mime_type: string    │         ┌──────────────────────┐
-│ file_size: int       │         │      TripMood         │
-│ type: enum(img|vid)  │         ├──────────────────────┤
-│ title: string        │         │ id: bigint PK         │
-│ is_favorite: bool    │         │ label: string         │
-└──────────────────────┘         │ label_normalized      │
-                                 │ use_count: int        │
-┌──────────────────────┐         │ created_by: FK null   │
-│     Itinerary        │         │ deleted_at (soft)     │
-├──────────────────────┤         └──────────────────────┘
-│ id: bigint PK        │
-│ user_id: FK          │         ┌──────────────────────┐
-│ trip_id: FK null     │         │   CommunityTopic      │
-│ title: string        │         ├──────────────────────┤
-│ content: JSON        │         │ id, user_id: FK       │
-│ destination          │         │ title, body           │
-│ duration: int        │         │ category, tags        │
-│ budget_range         │         │ views, likes          │
-│ travel_style         │         └──────────────────────┘
-│ generated_by: AI     │
-└──────────────────────┘         ┌──────────────────────┐
-                                 │   CommunityReply      │
-┌──────────────────────┐         ├──────────────────────┤
-│      Message         │         │ id, topic_id: FK      │
-├──────────────────────┤         │ user_id: FK           │
-│ id: bigint PK        │         │ body: text            │
-│ sender_id: FK        │         │ likes: int            │
-│ receiver_id: FK      │         └──────────────────────┘
-│ body: text           │
-│ read_at: timestamp   │         ┌──────────────────────┐
-└──────────────────────┘         │   CommunityGroup      │
-                                 ├──────────────────────┤
-┌──────────────────────┐         │ id, user_id: FK       │
-│   Accommodation      │         │ name, description     │
-├──────────────────────┤         │ category, image_url   │
-│ id: bigint PK        │         │ member_count          │
-│ name: string         │         └──────────────────────┘
-│ city, country        │
-│ style: string        │         ┌──────────────────────┐
-│ budget_tier          │         │   CommunityStory      │
-│ nightly_rate: float  │         ├──────────────────────┤
-│ rating: int          │         │ id, user_id: FK       │
-│ lat, lng: float      │         │ title, body           │
-│ image_url: string    │         │ destination           │
-│ is_active: bool      │         │ image_url             │
-└──────────────────────┘         └──────────────────────┘
-```
 
 ### Controller → Service Relationships
 
@@ -574,32 +368,7 @@ DashboardController     ──aggregates──▶ Trip, Booking, Media, SavedDes
 
 ### Revenue Streams
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                  Revenue Model                           │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  1. SERVICE FEE (5%)                                     │
-│     Applied to every booking (flight + accommodation)    │
-│     Waived for Premium subscribers                       │
-│     Example: $500 booking → $25 service fee              │
-│                                                          │
-│  2. PREMIUM SUBSCRIPTION ($9.99/month)                   │
-│     30-day rolling subscription                          │
-│     Benefits: No service fees, priority AI, PDF export   │
-│     Stored in subscriptions table                        │
-│                                                          │
-│  3. AGENCY COMMISSION (10%)                              │
-│     Platform earns 10% on agency-listed bookings         │
-│     Tracked in revenue_records.agency_commission         │
-│                                                          │
-│  4. COUPON SYSTEM                                        │
-│     Promo codes drive acquisition (WELCOME10, SAVE20)    │
-│     Percentage or fixed-amount discounts                 │
-│     Per-user limits, expiry dates, usage caps            │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
-```
+
 
 ### Pricing Flow
 
@@ -696,12 +465,12 @@ api/index.php (bootstrap)
 
 | Variable | Required | Description |
 |---|---|---|
-| APP_KEY | ✅ | Laravel encryption key |
-| APP_URL | ✅ | Full deployment URL |
-| DATABASE_URL | ✅ | Neon PostgreSQL connection string |
-| GROQ_API_KEY | ✅ | Groq LLM API key |
-| APP_ENV | ✅ | production |
-| APP_DEBUG | ✅ | false |
+| APP_KEY |  | Laravel encryption key |
+| APP_URL |  | Full deployment URL |
+| DATABASE_URL |  | Neon PostgreSQL connection string |
+| GROQ_API_KEY |  | Groq LLM API key |
+| APP_ENV |  | production |
+| APP_DEBUG |  | false |
 | PUSHER_APP_KEY | Optional | Real-time chat |
 | PUSHER_APP_SECRET | Optional | Real-time chat |
 | AVIATIONSTACK_KEY | Optional | Flight search |
